@@ -1,5 +1,7 @@
 rm(list=ls())
-source("~/Dropbox/phd/symmetry/function.R")
+library(rstudioapi)
+setwd(dirname(getSourceEditorContext()$path))
+source("function.R")
 
 ## Simulations
 badwindow <- simfunction(window = "bad") # Normal, bad window
