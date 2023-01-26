@@ -1,16 +1,32 @@
 library(survival)
 library(MortalityTables)
+library(foreach)
+library(doParallel)
+registerDoParallel(makeCluster(6))
+library(doRNG)
 
-rgompertz <- function(n, alpha = exp(-10), beta = .085){
-  u <- runif(n)
-  log(1 - beta / alpha * log(1-u)) / beta
+rgompertz <- function(n, a = 0.0001755355, b = 0.0649845, x = Inf, HR = 0){
+  u <- z <- runif(n)
+  limit <- Inf
+  if(HR == 0){
+    z <- rep(Inf, n)
+  }
+  else if(all(x < Inf) & HR != 1){
+    limit <- 1 - exp(-a/b * (exp(b*x)))
+    z[u < limit] <- log(1 - b / a * log(1-u[u < limit])) / b
+    z[u > limit] <- log((-b/a*log(1-u[u>limit]) + 1 - exp(b*x[u>limit]) + HR * exp(b*x[u>limit])) / HR) / b
+  } 
+  else{
+    z <-  log(1 - b / a * log(1-u)) / b
+  }
+  z
 }
 
 
-simfunction <- function(n = 1e5, nsim = 100, l1 = .072, l2 = .072, t1 = 0, t2 = Inf, HR = 1, frailtyVar = 0, delta = Inf, comprisk = FALSE){
+simfunction <- function(n = 1e5, nsim = 100, l1 = .072, l2 = .072, HR = 1, frailtyVar = 0, delta = Inf,
+                        a = 0.0001755355, b = 0.0649845, HR2 = 0){
     rc <- rn <- ra <- rcox <- nsub <- deltas <- p <- numeric(nsim)
-    for(i in 1:nsim){
-        # cat(i, "\n")
+    out <- foreach(i = 1:nsim, .combine = "rbind", .export = "rgompertz") %dorng% {
         if(frailtyVar > 0){
             frail <- rgamma(n, shape = 1/frailtyVar, scale = frailtyVar)            
             l1frail <- l1 * frail
@@ -26,62 +42,30 @@ simfunction <- function(n = 1e5, nsim = 100, l1 = .072, l2 = .072, t1 = 0, t2 = 
         cond <- u < (1-exp(-l2frail*X)) 
         Y[cond] <- -log(1-u[cond]) / l2frail[cond]
         Y[!cond] <- (l2frail[!cond] * X[!cond] * (HR-1) - log(1-u[!cond])) / (l2frail[!cond] * HR)
-        Z <- rep(Inf, n)
-        if(comprisk){
-          Z <- rgompertz(n)
-          # dat <- data.frame(trt = rep(0,n))
-          # sim <- simsurv(dist = "gompertz", lambdas = exp(-10), gammas = 0.085, betas = c(trt = 0), x = dat)
-          # Z <- sim$eventtime
-        } 
-        d <- data.frame(x = X[pmin(X,Y)>t1 & pmax(X,Y)<pmin(t2,Z)], 
-                        y = Y[pmin(X,Y)>t1 & pmax(X,Y)<pmin(t2,Z)])
+        Z <- rgompertz(n, a = a, b = b, x = X, HR = HR2)
+        d <- data.frame(x = X[pmax(X,Y) < Z], 
+                        y = Y[pmax(X,Y) < Z])
         dsub <- subset(d, abs(x-y) < delta)
-        # if(t1 == 0 & t2 == Inf){
-          # d <- data.frame(x = X[Y < (2*X)], y = Y[Y < (2*X)])                    # Virker ikke pga. tidstrend
-        # }
-        # if(nsubs == Inf){
-          # dsub <- d
-        # }
-        # else{
-          # dsub <- d[order(abs(d$y-d$x)),][1:nsubs,]
-        # }
-        # delta <- with(dsub, max(abs(y-x)))
-        # deltas[i] <- delta
-        nsub[i] <- nrow(dsub)
-        rc[i] <- with(dsub, sum(x < y) / sum(y < x))
-        # test <- with(d, (sum(x < y) - sum(y < x))^2 / nrow(d))
-        # p[i] <- 1 - pchisq(test, df = 1)
-        # if(adjust == "good"){
-          # da <- data.frame(x = X, y = Y)[1:min(nsub[i], 1000),]
-        # }
-        # else{
-          # da <- d[1:min(nsub[i], 1000),]
-        # }
-        
+        nsub <- nrow(dsub)
+        rc <- with(dsub, sum(x < y) / sum(y < x))
+
         helpers1 <- helpers2 <- numeric(100)
         for(j in 1:100){
           dsample <- d
           dsample[,2] <- sample(d[,2])
-          # if(nsubs != Inf){
-            dsample <- dsample[abs(dsample$y-dsample$x) < delta,]
-          # }
+          dsample <- dsample[abs(dsample$y-dsample$x) < delta,]
           helpers1[j] <- with(dsample, sum(y>x))
           helpers2[j] <- with(dsample, sum(x>y))
         }
-        rn[i] <- sum(helpers1) / sum(helpers2)
-        ra[i] <- rc[i] / rn[i]
-        dCox <- data.frame(time1 = rep(0, sum(Y<X)), time2 = Y[Y < X], status = 1, treat = 0)
-        dCox <- rbind(dCox, data.frame(time1 = rep(0, sum(Y>X)), time2 = X[Y>X], status = 0, treat = 0))
-        dCox <- rbind(dCox, data.frame(time1 = X[Y>X], time2 = Y[Y>X], status = 1, treat = 1))
-        rcox[i] <- coef(coxph(Surv(time1, time2, status) ~ treat, data = dCox, timefix = FALSE))
-        # cat("crude ", rc[i], "\n")
-        # cat("null ", rn[i], "\n")
-        # cat("adjusted ", ra[i], "\n")
-        # cat("cox ", rcox[i], "\n")
-        # cat("nsub ", nsub[i], "\n")
+        rn <- sum(helpers1) / sum(helpers2)
+        ra <- rc / rn
+        # dCox <- data.frame(time1 = rep(0, sum(Y<X)), time2 = Y[Y < X], status = 1, treat = 0)
+        # dCox <- rbind(dCox, data.frame(time1 = rep(0, sum(Y>X)), time2 = X[Y>X], status = 0, treat = 0))
+        # dCox <- rbind(dCox, data.frame(time1 = X[Y>X], time2 = Y[Y>X], status = 1, treat = 1))
+        # rcox <- coef(coxph(Surv(time1, time2, status) ~ treat, data = dCox, timefix = FALSE))
+        # c(rc, rn, ra, rcox, nsub)
+        c(rc, rn, ra, nsub)
     }
-    # data.frame(rc = rc, rn = rn, ra = ra, rcox = rcox, delta = deltas, p = p)
-    # data.frame(rc = rc, rn = rn, ra = ra, rcox = rcox, delta = deltas)
-    data.frame(rc = rc, rn = rn, ra = ra, rcox = rcox, nsub = nsub)
+    out
 }
 
