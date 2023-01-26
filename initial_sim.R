@@ -2,9 +2,55 @@ rm(list=ls())
 library(rstudioapi)
 setwd(dirname(getSourceEditorContext()$path))
 source("function.R")
+set.seed(25012023)
+
+# Parameters --------------------------------------------------------------
+deltas <- c(Inf, 10, 1)
+competingRisk <- c(FALSE, TRUE)
+lambda2 <- c(.072, .036)
+frailtyVar <- c(0,1)
+HR <- c(1,2)
+
+
+# All simulations ---------------------------------------------------------
+results <- list()
+i <- 1
+starttime <- Sys.time()
+for(hr in HR){
+  for(comp in competingRisk){
+    for(lambda in lambda2){
+      for(vars in frailtyVar){
+        for(delta in deltas){
+          cat(i, "\n")
+          results[[i]] <- list(name = data.frame(delta = delta, comprisk = comp, lambda = lambda, var = vars, HR = hr), 
+                               ests = simfunction(n = 1e4, nsim = 1000, l2 = lambda, HR = hr, frailtyVar = vars, delta = delta, comprisk = comp))
+          cat("Expected time left:", (48-i) * difftime(Sys.time(), starttime, units = "mins") / i, "\n")
+          cat("Total time so far:", difftime(Sys.time(), starttime, units = "mins"), "\n")
+          cat("Expected total time:", difftime(Sys.time(), starttime, units = "mins") + 
+                (48-i) * difftime(Sys.time(), starttime, units = "mins") / i, "\n")
+          i <- i + 1
+        }
+      }
+    }
+  }
+}
+endtime <- Sys.time()
+difftime(starttime, endtime)
+saveRDS(results, "allresults.rds")
+
+# Save results ------------------------------------------------------------
+smallresults <- meanresults <- data.frame()#data.frame(delta = NULL, comprisk = NULL, lambda = NULL, var = NULL, HR = NULL)
+# meanresults <- data.frame(rc = NULL, rn = NULL, ra = NULL)
+for(i in 1:length(results)){
+  smallresults <- rbind(smallresults, results[[i]]$name)
+  meanresults <- rbind(meanresults, apply(results[[i]]$ests, 2, mean))
+}
+res <- cbind(smallresults, meanresults)
+names(res)[6:10] <- c("rc", "rn", "ra", "rcox", "nsub")
+saveRDS(res, "meanresults.rds")
 
 # No effect of treatment, no frailty, no timetrend, and infinite delta
-simNoEffNoFrailtyNoTTInfDelta <- simfunction(nsim = 1000)
+simNoEffNoFrailtyNoTTInfDelta <- simfunction(nsim = 100)
 round(apply(simNoEffNoFrailtyNoTTInfDelta, 2, mean), 2)                         # Everything works
 round(exp(mean(simNoEffNoFrailtyNoTTInfDelta[,4])), 2)
 
