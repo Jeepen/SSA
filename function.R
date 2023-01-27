@@ -23,7 +23,7 @@ rgompertz <- function(n, a = 0.0001755355, b = 0.0649845, x = Inf, HR = 0){
 }
 
 
-simfunction <- function(n = 1e5, nsim = 100, l1 = .072, l2 = .072, HR = 1, frailtyVar = 0, delta = Inf,
+simfunction <- function(n = 1e5, nsim = 100, l1 = .01, l2 = .01, HR = 1, frailtyVar = 0, delta = Inf,
                         a = 0.0001755355, b = 0.0649845, HR2 = 0){
     rc <- rn <- ra <- rcox <- nsub <- deltas <- p <- numeric(nsim)
     out <- foreach(i = 1:nsim, .combine = "rbind", .export = "rgompertz") %dorng% {
