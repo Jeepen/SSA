@@ -24,7 +24,7 @@ for(hr in HR){
         for(delta in deltas){
           cat(i, "\n")
           results[[i]] <- list(name = data.frame(delta = delta, HR2 = hr2, lambda = lambda, var = vars, HR = hr), 
-                               ests = simfunction(n = 1e4, nsim = 1000, l1 = lambda, HR = hr, frailtyVar = vars, delta = delta, HR2 = hr2))
+                               ests = simfunction(n = 1e2, nsim = 1000, l1 = lambda, HR = hr, frailtyVar = vars, delta = delta, HR2 = hr2))
           cat("Expected time left:", (totalscenarios-i) * difftime(Sys.time(), starttime, units = "mins") / i, "\n")
           cat("Total time so far:", difftime(Sys.time(), starttime, units = "mins"), "\n")
           cat("Expected total time:", difftime(Sys.time(), starttime, units = "mins") + 
