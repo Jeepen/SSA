@@ -75,6 +75,8 @@ simfunction <- function(n = 1e5, nsim = 100, l1 = .01, l2 = .01, HR = 1, frailty
         ntotal <- ntotal + n
         ncounter <- with(d, sum(abs(y-x) < delta))
       }
+      d <- with(d, d[1:match(n, cumsum(abs(x-y) < delta)),])
+      cat("Right?", with(d, sum(abs(x-y) < delta)), "\n")
       dsub <- subset(d, abs(x-y) < delta)
       nsub <- nrow(dsub)
       rc <- with(dsub, sum(x < y) / sum(y < x))

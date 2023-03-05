@@ -38,7 +38,7 @@ for(hr in HR){
 }
 endtime <- Sys.time()
 difftime(endtime, starttime)
-saveRDS(results, "allresults2.rds")
+saveRDS(results, "allresults3.rds")
 
 # Save results ------------------------------------------------------------
 smallresults <- meanresults <- data.frame()
@@ -47,5 +47,5 @@ for(i in 1:length(results)){
   meanresults <- rbind(meanresults, apply(results[[i]]$ests, 2, mean))
 }
 res <- cbind(smallresults, meanresults)
-names(res)[6:9] <- c("rc", "rn", "ra", "nsub")
-saveRDS(res, "meanresults2.rds")
+names(res)[6:10] <- c("rc", "rn", "ra", "nsub", "totalsubs")
+saveRDS(res, "meanresults3.rds")
