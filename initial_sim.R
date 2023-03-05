@@ -5,6 +5,34 @@ source("function.R")
 source("demography.R")
 set.seed(25012023)
 
+
+# Simulations -------------------------------------------------------------
+simple_simple <- simfunction(n = 1e4, nsim = 1000, HR2 = 0)
+round(apply(simple_simple, 2, mean), 2)
+simple_effect <- simfunction(n = 1e4, nsim = 1000, HR2 = 0, HR = 10)
+round(apply(simple_effect, 2, mean), 2)
+effect_competingrisk <- simfunction(n = 1e4, nsim = 1000, HR = 2)
+round(apply(effect_competingrisk, 2, mean), 2)
+noeffect_competingrisk_timetrend <- simfunction(n = 1e4, nsim = 1000, l1 = .04)
+round(apply(noeffect_competingrisk_timetrend, 2, mean), 2)
+noeffect_dependentcompetingrisk_timetrend <- simfunction(n = 1e4, nsim = 1000, l1 = .04, HR2 = .2)
+round(apply(noeffect_dependentcompetingrisk_timetrend, 2, mean), 2)
+noeffect_competingrisk_timetrend_confounding <- simfunction(n = 1e4, nsim = 1000, l1 = .04, frailtyVar = 1)
+round(apply(noeffect_competingrisk_timetrend_confounding, 2, mean), 2)
+noeffect_competingrisk_timetrend_confounding_smallwindow <- 
+  simfunction(n = 1e4, nsim = 1000, l1 = .04, frailtyVar = 1, delta = .5)
+round(apply(noeffect_competingrisk_timetrend_confounding_smallwindow, 2, mean), 2)
+effect_competingrisk_timetrend_confounding_smallwindow <- 
+  simfunction(n = 1e4, nsim = 1000, l1 = .04, frailtyVar = 1, delta = .5, HR = 2)
+round(apply(effect_competingrisk_timetrend_confounding_smallwindow, 2, mean), 2)
+
+
+
+
+effect_smallwindow <- simfunction(n = 1e4, nsim = 1000, HR = 2, delta = 1.5)
+apply(effect_smallwindow, 2, mean)
+
+
 # Parameters --------------------------------------------------------------
 deltas <- c(Inf, 10, 1.5)
 lambda1 <- c(.01, .02)
