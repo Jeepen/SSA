@@ -5,7 +5,7 @@ library(doParallel)
 registerDoParallel(makeCluster(3))
 library(doRNG)
 
-rgompertz <- function(n, a = 0.0001755355, b = 0.0649845, x = Inf, HR = 0){
+rgompertz <- function(n, a = 3.238905e-5, b = 0.1039083, x = Inf, HR = 0){
   u <- z <- runif(n)
   limit <- Inf
   if(HR == 0){
@@ -23,7 +23,7 @@ rgompertz <- function(n, a = 0.0001755355, b = 0.0649845, x = Inf, HR = 0){
 }
 
 simsubs <- function(n, l1 = .01, l2 = .01, HR = 1, frailtyVar = 0, delta = Inf, 
-                    a = 0.0001755355, b = 0.0649845, HR2 = 1){
+                    a = 3.238905e-5, b = 0.1039083, HR2 = 1){
   if(frailtyVar > 0){
     frail <- rgamma(n, shape = 1/frailtyVar, scale = frailtyVar)            
     l1frail <- l1 * frail
@@ -44,8 +44,8 @@ simsubs <- function(n, l1 = .01, l2 = .01, HR = 1, frailtyVar = 0, delta = Inf,
              y = Y[pmax(X,Y) < Z])
 }
 
-simfunction <- function(n = 1e5, nsim = 100, l1 = .01, l2 = .01, HR = 1, frailtyVar = 0, delta = Inf,
-                        a = 0.0001755355, b = 0.0649845, HR2 = 1){
+simfunction <- function(n = 1e5, nsim = 100, l1 = .025, l2 = .025, HR = 1, frailtyVar = 0, delta = Inf,
+                        a = 3.238905e-5, b = 0.1039083, HR2 = 1){
     rc <- rn <- ra <- rcox <- nsub <- deltas <- p <- numeric(nsim)
     out <- foreach(i = 1:nsim, .combine = "rbind", .export = c("rgompertz", "simsubs")) %dorng% {
         if(frailtyVar > 0){
